@@ -16,9 +16,29 @@
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item">
-                <a href="#" class="nav-link">Mon compte !</a>
-            </li>
+            {% if app.user %}
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" id="accountDropdownLink">
+                        <img src="{{app.user.picture}}" class="avatar avatar-mini" alt="Avatar de {{app.user.fullName}}"> {{app.user.fullName}}
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="accountDopdownLink">
+                        <a href="{{ path('ads_create') }}" class="dropdown-item">Créer une annonce</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ path('account_index') }}" class="dropdown-item">Mon compte</a>
+                        <a href="{{ path('account_profile') }}" class="dropdown-item">Modifier mon profil</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ path('account_logout') }}" class="dropdown-item">Déconnexion</a>
+                    </div>
+                </li>
+            {% else %}
+                <li class="nav-item">
+                    <a href="{{ path('account_register') }}" class="nav-link">Inscription</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ path('account_login') }}" class="nav-link">Connexion</a>
+                </li>
+            {% endif %}
         </ul>
     </div>
 </nav>
