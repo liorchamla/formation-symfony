@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Comment;
 use App\Form\AdminCommentType;
+use App\Service\PaginationService;
 use App\Repository\CommentRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Doctrine\Common\Persistence\ObjectManager;
@@ -13,16 +14,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 class AdminCommentController extends Controller
 {
     /**
-     * @Route("/admin/comments", name="admin_comment_index")
+     * @Route("/admin/comments/{page<\d+>?1}", name="admin_comment_index")
      */
-    public function index(CommentRepository $repo)
+    public function index(PaginationService $pagination, $page)
     {
-        // $repo = $this->getDoctrine()->getRepository(Comment::class);
-
-        $comments = $repo->findAll();
+        $pagination->setEntity(Comment::class)
+                   ->setPage($page)
+                   ->setLimit(5)
+                   ->setRoute('admin_comment_index');
 
         return $this->render('admin/comment/index.html.twig', [
-            'comments' => $comments,
+            'pagination' => $pagination
         ]);
     }
 

@@ -20,7 +20,7 @@
             </thead>
 
             <tbody>
-                {% for booking in bookings %}
+                {% for booking in pagination.data %}
                 <tr>
                     <td>{{booking.id}}</td>
                     <td>{{booking.createdAt|date('d/m/Y H:i')}}</td>
@@ -41,5 +41,7 @@
             </tbody>
         
         </table>
+
+        {% include 'admin/partials/pagination.html.twig' %}
     </div>
 {% endblock %}

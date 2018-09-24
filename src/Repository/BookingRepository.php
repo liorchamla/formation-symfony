@@ -17,7 +17,7 @@ class BookingRepository extends ServiceEntityRepository
     public function __construct(RegistryInterface $registry)
     {
         parent::__construct($registry, Booking::class);
-    }
+    } 
 
 //    /**
 //     * @return Booking[] Returns an array of Booking objects
