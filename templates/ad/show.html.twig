@@ -6,7 +6,7 @@
 
 {% block body %}
 
-<div class="ad-title" style="background-image: url({{ ad.coverImage }})">
+<div class="ad-title" style="background-image: url({{ asset('uploads/images/' ~ ad.coverImage) }})">
     <div class="container">
         <h1>{{ad.title}}</h1>
         <p>{{ad.introduction}}</p>
