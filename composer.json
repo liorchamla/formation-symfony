@@ -25,10 +25,10 @@
         "symfony/validator": "^4.1",
         "symfony/web-link": "^4.1",
         "symfony/webpack-encore-pack": "^1.0",
-        "symfony/yaml": "^4.1"
+        "symfony/yaml": "^4.1",
+        "doctrine/doctrine-fixtures-bundle": "^3.0"
     },
     "require-dev": {
-        "doctrine/doctrine-fixtures-bundle": "^3.0",
         "symfony/debug-pack": "*",
         "symfony/dotenv": "^4.1",
         "symfony/maker-bundle": "^1.0",
@@ -70,7 +70,8 @@
             "@auto-scripts"
         ],
         "compile": [
-            "php bin/console doctrine:migrations:migrate"
+            "php bin/console doctrine:migrations:migrate",
+            "php bin/console doctrine:fixtures:load --no-interaction --env=PROD"
         ]
     },
     "conflict": {
