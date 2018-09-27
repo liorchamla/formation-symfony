@@ -26,7 +26,7 @@
         "symfony/web-link": "^4.1",
         "symfony/webpack-encore-pack": "^1.0",
         "symfony/yaml": "^4.1",
-        "doctrine/doctrine-fixtures-bundle": "^3.0"
+        "doctrine/doctrine-fixtures-bundle": "^3.0""doctrine/doctrine-fixtures-bundle": "^3.0"
     },
     "require-dev": {
         "symfony/debug-pack": "*",
@@ -70,8 +70,7 @@
             "@auto-scripts"
         ],
         "compile": [
-            "php bin/console doctrine:migrations:migrate",
-            "php bin/console doctrine:fixtures:load --no-interaction --env=PROD"
+            "php bin/console doctrine:migrations:migrate"
         ]
     },
     "conflict": {
