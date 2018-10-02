@@ -16,12 +16,11 @@ class AdminCommentController extends Controller
     /**
      * @Route("/admin/comments/{page<\d+>?1}", name="admin_comment_index")
      */
-    public function index(PaginationService $pagination, $page)
+    public function index(CommentRepository $repo, $page, PaginationService $pagination)
     {
-        $pagination->setEntity(Comment::class)
-                   ->setPage($page)
+        $pagination->setEntityClass(Comment::class)
                    ->setLimit(5)
-                   ->setRoute('admin_comment_index');
+                   ->setPage($page);
 
         return $this->render('admin/comment/index.html.twig', [
             'pagination' => $pagination

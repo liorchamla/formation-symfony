@@ -41,7 +41,7 @@
                 {% endfor %}
             </tbody>
         </table>
-
-        {% include 'admin/partials/pagination.html.twig' %}
+        
+        {{ pagination.display() }}
     </div>
 {% endblock %}

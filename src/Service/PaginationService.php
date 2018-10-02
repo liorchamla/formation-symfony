@@ -2,186 +2,264 @@
 
 namespace App\Service;
 
+use Twig\Environment;
+use Symfony\Component\HttpFoundation\Request;
 use Doctrine\Common\Persistence\ObjectManager;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Permet de gérer la pagination au sein de mes pages de liste
+ * Classe de pagination qui extrait toute notion de calcul et de récupération de données de nos controllers
+ * 
+ * Elle nécessite après instanciation qu'on lui passe l'entité sur laquelle on souhaite travailler
  */
 class PaginationService {
-    
     /**
-     * Le nom de l'entité sur laquelle on pagine
+     * Le nom de l'entité sur laquelle on veut effectuer une pagination
      *
      * @var string
      */
-    private $entityName;
+    private $entityClass;
 
     /**
-     * Le manager de Doctrine qui permet de créer des requête DQL
+     * Le nombre d'enregistrement à récupérer
+     *
+     * @var integer
+     */
+    private $limit = 10;
+
+    /**
+     * La page sur laquelle on se trouve actuellement
+     *
+     * @var integer
+     */
+    private $currentPage = 1;
+
+    /**
+     * Le manager de Doctrine qui nous permet notamment de trouver le repository dont on a besoin
      *
      * @var ObjectManager
      */
     private $manager;
 
     /**
-     * La limite de pagination
+     * Le moteur de template Twig qui va permettre de générer le rendu de la pagination
      *
-     * @var int
+     * @var Twig\Environment
      */
-    private $limit;
+    private $twig;
 
     /**
-     * La page sur laquelle on se trouve
-     *
-     * @var int
-     */
-    private $page;
-
-    /**
-     * La route sur laquelle on veut que les boutons pointent
+     * Le nom de la route que l'on veut utiliser pour les boutons de la navigation
      *
      * @var string
      */
     private $route;
 
     /**
-     * Constructeur
+     * Le chemin vers le template qui contient la pagination
+     *
+     * @var string
+     */
+    private $templatePath;
+
+    /**
+     * Constructeur du service de pagination qui sera appelé par Symfony
+     * 
+     * N'oubliez pas de configurer votre fichier services.yaml afin que Symfony sache quelle valeur
+     * utiliser pour le $templatePath
      *
      * @param ObjectManager $manager
-     * @param integer $limit
+     * @param Environment $twig
+     * @param RequestStack $request
+     * @param string $templatePath
      */
-    public function __construct(ObjectManager $manager, $limit = 10){
-        $this->manager = $manager;
-        $this->limit = $limit;
+    public function __construct(ObjectManager $manager, Environment $twig, RequestStack $request, string $templatePath) {
+        // On récupère le nom de la route à utiliser à partir des attributs de la requête actuelle
+        $this->route        = $request->getCurrentRequest()->attributes->get('_route');        
+        // Autres initialisations
+        $this->manager      = $manager;
+        $this->twig         = $twig;
+        $this->templatePath = $templatePath;
     }
 
     /**
-     * Permet de modifier la route qu'on veut appeler sur les boutons de pagination
+     * Permet d'afficher le rendu de la navigation au sein d'un template twig !
+     * 
+     * On se sert ici de notre moteur de rendu afin de compiler le template qui se trouve au chemin
+     * de notre propriété $templatePath, en lui passant les variables :
+     * - page  => La page actuelle sur laquelle on se trouve
+     * - pages => le nombre total de pages qui existent
+     * - route => le nom de la route à utiliser pour les liens de navigation
      *
-     * @param string $route
+     * Attention : cette fonction ne retourne rien, elle affiche directement le rendu
+     * 
+     * @return void
+     */
+    public function display() {
+        $this->twig->display($this->templatePath, [
+            'page' => $this->currentPage,
+            'pages' => $this->getPages(),
+            'route' => $this->route
+        ]);
+    }
+
+    /**
+     * Permet de récupérer le nombre de pages qui existent sur une entité particulière
+     * 
+     * Elle se sert de Doctrine pour récupérer le repository qui correspond à l'entité que l'on souhaite
+     * paginer (voir la propriété $entityClass) puis elle trouve le nombre total d'enregistrements grâce
+     * à la fonction findAll() du repository
+     * 
+     * @throws Exception si la propriété $entityClass n'est pas configurée
+     * 
+     * @return int
+     */
+    public function getPages(): int {
+        if(empty($this->entityClass)) {
+            // Si il n'y a pas d'entité configurée, on ne peut pas charger le repository, la fonction
+            // ne peut donc pas continuer !
+            throw new \Exception("Vous n'avez pas spécifié l'entité sur laquelle nous devons paginer ! Utilisez la méthode setEntityClass() de votre objet PaginationService !");
+        }
+
+        // 1) Connaitre le total des enregistrements de la table
+        $total = count($this->manager
+                        ->getRepository($this->entityClass)
+                        ->findAll());
+
+        // 2) Faire la division, l'arrondi et le renvoyer
+        return ceil($total / $this->limit);
+    }
+
+    /**
+     * Permet de récupérer les données paginées pour une entité spécifique
+     * 
+     * Elle se sert de Doctrine afin de récupérer le repository pour l'entité spécifiée
+     * puis grâce au repository et à sa fonction findBy() on récupère les données dans une 
+     * certaine limite et en partant d'un offset
+     * 
+     * @throws Exception si la propriété $entityClass n'est pas définie
+     *
+     * @return array
+     */
+    public function getData() {
+        if(empty($this->entityClass)) {
+            throw new \Exception("Vous n'avez pas spécifié l'entité sur laquelle nous devons paginer ! Utilisez la méthode setEntityClass() de votre objet PaginationService !");
+        }
+        // 1) Calculer l'offset
+        $offset = $this->currentPage * $this->limit - $this->limit;
+
+        // 2) Demander au repository de trouver les éléments à partir d'un offset et 
+        // dans la limite d'éléments imposée (voir propriété $limit)
+        return $this->manager
+                        ->getRepository($this->entityClass)
+                        ->findBy([], [], $this->limit, $offset);
+    }
+
+    /**
+     * Permet de spécifier la page que l'on souhaite afficher
+     *
+     * @param int $page
      * @return self
      */
-    public function setRoute($route) {
+    public function setPage(int $page): self {
+        $this->currentPage = $page;
+
+        return $this;
+    }
+
+    /**
+     * Permet de récupérer la page qui est actuellement affichée
+     *
+     * @return int
+     */
+    public function getPage(): int {
+        return $this->currentPage;
+    }
+
+    /**
+     * Permet de spécifier le nombre d'enregistrements que l'on souhaite obtenir !
+     *
+     * @param int $limit
+     * @return self
+     */
+    public function setLimit(int $limit): self {
+        $this->limit = $limit;
+
+        return $this;
+    }
+
+    /**
+     * Permet de récupérer le nombre d'enregistrements qui seront renvoyés
+     *
+     * @return int
+     */
+    public function getLimit(): int {
+        return $this->limit;
+    }
+
+    /**
+     * Permet de spécifier l'entité sur laquelle on souhaite paginer
+     * Par exemple :
+     * - App\Entity\Ad::class
+     * - App\Entity\Comment::class
+     *
+     * @param string $entityClass
+     * @return self
+     */
+    public function setEntityClass(string $entityClass): self {
+        $this->entityClass = $entityClass;
+
+        return $this;
+    }
+
+    /**
+     * Permet de récupérer l'entité sur laquelle on est en train de paginer
+     *
+     * @return string
+     */
+    public function getEntityClass(): string {
+        return $this->entityClass;
+    }
+
+    /**
+     * Permet de choisir un template de pagination
+     *
+     * @param string $templatePath
+     * @return self
+     */
+    public function setTemplatePath(string $templatePath): self {
+        $this->templatePath = $templatePath;
+
+        return $this;
+    }
+
+    /**
+     * Permet de récupérer le templatePath actuellement utilisé
+     *
+     * @return string
+     */ 
+    public function getTemplatePath(): string {
+        return $this->templatePath;
+    }
+
+    /**
+     * Permet de changer la route par défaut pour les liens de la navigation
+     *
+     * @param string $route Le nom de la route à utiliser
+     * @return self
+     */
+    public function setRoute(string $route): self {
         $this->route = $route;
 
         return $this;
     }
 
     /**
-     * Permet de récupérer la route configurée
+     * Permet de récupérer le nom de la route qui sera utilisé sur les liens de la navigation
      *
      * @return string
      */
-    public function getRoute() {
-        return $this->route;
+    public function getRoute(): string {
+        return $route;
     }
-
-    /**
-     * Permet de préciser de quelle entité il s'agit
-     *
-     * @param string $entityName
-     * @return self
-     */
-    public function setEntity($entityName) {
-        $this->entityName = $entityName;
-
-        return $this;
-    }
-
-    /**
-     * Permet de savoir de quelle entité on parle
-     *
-     * @return string
-     */
-    public function getEntity() {
-        return $this->entityName;
-    }
-
-    /**
-     * Permet de mettre en place une limite personnalisée
-     *
-     * @param int $limit
-     * @return self
-     */
-    public function setLimit($limit) {
-        $this->limit = $limit;
-
-        return $this;
-    }
-
-    /**
-     * Permet de connaitre la limite
-     *
-     * @return int
-     */
-    public function getLimit(){
-        return $this->limit;
-    }
-
-    /**
-     * Permet de donner la page courante sur laquelle on se trouve
-     *
-     * @param int $page
-     * @return self
-     */
-    public function setPage($page) {
-        $this->page = $page;
-
-        return $this;
-    }
-
-    /**
-     * Permet de connaitre la page courante sur laquelle on se trouve
-     *
-     * @return int
-     */
-    public function getPage() {
-        return $this->page;
-    }
-
-    /**
-     * Permet de récupérer les données paginées
-     *
-     * @param int $page
-     * @param int $limit
-     * @return array
-     */
-    public function getData($page = null, $limit = null) {
-        if(empty($this->entityName)) {
-            throw new \Exception("Vous devez spécifier l'Entité sur laquelle vous voulez paginer");
-        }
-
-        if(!$limit) $limit = $this->limit;
-        if(!$page) $page = $this->page;
-
-        $start = $page * $limit - $limit;
-
-        return $this->manager->createQueryBuilder()
-                ->select('x')
-                ->from($this->entityName, 'x')
-                ->setFirstResult($start)
-                ->setMaxResults($limit)
-                ->getQuery()
-                ->getResult();
-
-    }
-
-    /**
-     * Permet de connaitre le nombre total de pages
-     *
-     * @param int $limit
-     * @return int
-     */
-    public function getPages($limit = null) {
-        if(!$limit) $limit = $this->limit;
-
-        $total = $this->manager->createQueryBuilder()
-                    ->select('COUNT(x)')
-                    ->from($this->entityName, 'x')
-                    ->getQuery()
-                    ->getSingleScalarResult();
-        
-        return ceil($total / $limit);
-    }
-    
 }

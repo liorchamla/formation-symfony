@@ -31,4 +31,4 @@ services:
     # please note that last definitions always *replace* previous ones
     App\Service\PaginationService:
         arguments:
-            $limit: 10
+            $templatePath: 'admin/partials/pagination.html.twig'

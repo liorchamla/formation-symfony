@@ -89,11 +89,6 @@ class Ad
      */
     private $comments;
 
-    /**
-     * @ORM\Column(type="datetime", nullable=true)
-     */
-    private $createdAt;
-
     public function __construct()
     {
         $this->images = new ArrayCollection();

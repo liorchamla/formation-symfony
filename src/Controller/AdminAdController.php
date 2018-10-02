@@ -18,9 +18,8 @@ class AdminAdController extends Controller
      */
     public function index(AdRepository $repo, $page, PaginationService $pagination)
     {
-        $pagination->setEntity(Ad::class)
-                   ->setPage($page)
-                   ->setRoute('admin_ads_index');
+        $pagination->setEntityClass(Ad::class)
+                   ->setPage($page);
 
         return $this->render('admin/ad/index.html.twig', [
             'pagination' => $pagination

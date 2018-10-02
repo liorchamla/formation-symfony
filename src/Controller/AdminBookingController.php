@@ -17,11 +17,10 @@ class AdminBookingController extends Controller
      * @Route("/admin/bookings/{page<\d+>?1}", name="admin_booking_index")
      */
     public function index(BookingRepository $repo, $page, PaginationService $pagination)
-    {
-        $pagination->setEntity(Booking::class)
-                   ->setPage($page)
-                   ->setRoute('admin_booking_index');
-                   
+    {        
+        $pagination->setEntityClass(Booking::class)
+                   ->setPage($page);
+
         return $this->render('admin/booking/index.html.twig', [
             'pagination' => $pagination
         ]); 
